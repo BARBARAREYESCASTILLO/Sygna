@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --background: #0a1013;
+  --foreground: #e8f0f1;
+  --surface: #111a1e;
+  --surface-raised: #152126;
+  --line: rgba(178, 208, 211, 0.11);
+  --muted: #829397;
+  --accent: #5ce1c0;
+  --blue: #70c8ef;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(38, 100, 91, 0.14), transparent 52%),
+    var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.simulation-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  height: 68px;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 clamp(20px, 5vw, 72px);
+  background: rgba(10, 16, 19, 0.8);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid rgba(92, 225, 192, 0.48);
+  border-radius: 9px;
+  background: rgba(92, 225, 192, 0.1);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+
+.brand-name span {
+  color: var(--accent);
+}
+
+.topbar-divider {
+  height: 19px;
+  border-left: 1px solid var(--line);
+}
+
+.topbar-label,
+.eyebrow {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.15px;
+}
+
+.topbar-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  color: #b1c0c2;
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #718084;
+}
+
+.status-dot.is-online {
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(92, 225, 192, 0.55);
+}
+
+.workspace {
+  display: flex;
+  width: min(1120px, calc(100% - 48px));
+  flex-direction: column;
+  gap: 18px;
+  margin: 0 auto;
+  padding: 38px 0 28px;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 2px;
+}
+
+.eyebrow {
+  margin: 0 0 9px;
+  font-size: 9px;
+}
+
+.eyebrow span,
+.heading-separator {
+  padding: 0 5px;
+  color: #48585b;
+}
+
+.page-heading h1 {
+  margin: 0;
+  color: #edf4f4;
+  font-size: clamp(25px, 3vw, 31px);
+  font-weight: 600;
+  letter-spacing: -1.1px;
+}
+
+.page-description {
+  margin: 7px 0 0;
+  color: #93a3a6;
+  font-size: 13px;
+}
+
+.scenario-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+  border: 1px solid rgba(92, 225, 192, 0.2);
+  border-radius: 999px;
+  background: rgba(92, 225, 192, 0.06);
+  padding: 8px 12px;
+  color: #a9c9c2;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.scenario-icon {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.session-grid {
+  display: grid;
+  min-height: 330px;
+  grid-template-columns: minmax(270px, 0.83fr) minmax(0, 1.65fr);
+  gap: 16px;
+}
+
+.simulation-disclaimer {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin: -5px 0 0;
+  color: #728286;
+  font-size: 10px;
+  text-align: center;
+}
+
+.simulation-disclaimer span {
+  color: #94aaa9;
+}
+
+@media (max-width: 700px) {
+  .topbar {
+    height: 58px;
+    gap: 12px;
+    padding: 0 18px;
+  }
+
+  .topbar-label {
+    font-size: 8px;
+    letter-spacing: 0.7px;
+  }
+
+  .topbar-status {
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .workspace {
+    width: min(100% - 28px, 540px);
+    gap: 13px;
+    padding-top: 25px;
+  }
+
+  .page-heading {
+    align-items: flex-start;
+  }
+
+  .scenario-badge {
+    margin-top: 21px;
+    padding: 7px 9px;
+    font-size: 0;
+  }
+
+  .scenario-icon {
+    font-size: 13px;
+  }
+
+  .session-grid {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar-label,
+  .topbar-divider {
+    display: none;
+  }
+
+  .topbar-status {
+    font-size: 9px;
+  }
+
+  .workspace {
+    width: calc(100% - 24px);
+  }
+
+  .page-heading h1 {
+    font-size: 24px;
+  }
+
+  .page-description {
+    font-size: 11px;
+  }
+}
