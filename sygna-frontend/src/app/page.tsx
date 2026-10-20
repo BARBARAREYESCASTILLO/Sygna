@@ -54,7 +54,7 @@ export default function SimulationRoom() {
 
   const setBackendSessionActive = useCallback(async (active: boolean, scenarioId?: string) => {
     const apiBaseUrl =
-      process.env.NEXT_PUBLIC_SESSION_API_URL ?? "http://localhost:8000";
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     try {
       const response = await fetch(`${apiBaseUrl}/session/${active ? "start" : "end"}`, {
         method: "POST",
@@ -78,7 +78,7 @@ export default function SimulationRoom() {
   useEffect(() => {
     let active = true;
     const apiBaseUrl =
-      process.env.NEXT_PUBLIC_SESSION_API_URL ?? "http://localhost:8000";
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
     async function loadScenariosAndStart() {
       let firstId: string | undefined;
@@ -119,7 +119,7 @@ export default function SimulationRoom() {
       return;
     }
     const apiBaseUrl =
-      process.env.NEXT_PUBLIC_SESSION_API_URL ?? "http://localhost:8000";
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     setEvaluating(true);
     setEvaluationError(null);
     try {

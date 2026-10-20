@@ -49,8 +49,11 @@ export function useVitalsStream() {
     let active = true;
     let retryTimer: number | undefined;
     let socket: WebSocket | undefined;
-    const url =
-      process.env.NEXT_PUBLIC_VITALS_WS_URL ?? "ws://localhost:8000/ws/vitals";
+    
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const wsProtocol = baseUrl.startsWith("https") ? "wss:" : "ws:";
+  const host = baseUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const url = `${wsProtocol}//${host}/ws/vitals`;
 
     function connect() {
       if (!active) return;

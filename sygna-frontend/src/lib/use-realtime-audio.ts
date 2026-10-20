@@ -185,8 +185,11 @@ export function useRealtimeAudio(vitals: VitalsState, sessionActive: boolean) {
       return;
     }
 
-    const socketUrl =
-      process.env.NEXT_PUBLIC_AUDIO_WS_URL ?? "ws://localhost:8000/ws/audio";
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+    const wsProtocol = baseUrl.startsWith("https") ? "wss:" : "ws:";
+    const host = baseUrl.replace(/^https?:\/\//, "");
+    const socketUrl = `${wsProtocol}//${host}/ws/audio`;
+
     const socket = new WebSocket(socketUrl);
     const recognition = new Recognition();
     micEnabledRef.current = true;
