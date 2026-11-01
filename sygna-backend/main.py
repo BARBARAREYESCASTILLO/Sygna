@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
@@ -28,6 +29,9 @@ GROQ_EXTRA_OPTIONS: dict[str, Any] = (
 DEFAULT_FRONTEND_ORIGINS = (
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://w21.cl",
+    "https://www.w21.cl",
+    "http://w21.cl",
 )
 
 
@@ -60,6 +64,9 @@ DEFAULT_INITIAL_VITALS = {
 DEFAULT_SCENARIO_NAME = "Dolor torácico"
 DEFAULT_SCENARIO_PROMPT = "Eres un paciente de 45 años que consulta por dolor torácico y presenta ansiedad alta."
 SCENARIOS_PATH = Path(__file__).parent / "data" / "scenarios.json"
+USER_SESSIONS_PATH = Path(__file__).parent / "user_sessions.json"
+USER_SESSIONS_LOCK = asyncio.Lock()
+ALLOWED_CAREERS = {"Ing. Biomédica", "Medicina", "Enfermería", "Kinesiología"}
 VITAL_KEYS = ("spo2", "heart_rate", "systolic", "diastolic", "respiratory_rate")
 
 
@@ -238,6 +245,10 @@ class PatientStateMachine:
 vitals = PatientStateMachine()
 simulation_active = False
 frontend_origins = configured_origins()
+
+
+def origin_allowed(origin: str | None) -> bool:
+    return not origin or "*" in frontend_origins or origin in frontend_origins
 groq_client = (
     AsyncGroq(api_key=os.environ["GROQ_API_KEY"])
     if os.getenv("GROQ_API_KEY")
@@ -325,6 +336,12 @@ class EvaluationMessage(BaseModel):
 
 class EvaluationRequest(BaseModel):
     messages: list[EvaluationMessage] = Field(min_length=1, max_length=MAX_EVALUATION_MESSAGES)
+
+
+class UserRegister(BaseModel):
+    nombre: str = Field(min_length=1, max_length=120)
+    carrera: str = Field(min_length=1, max_length=80)
+    caso_id: str = Field(min_length=1, max_length=80)
 
 
 def parse_evaluation(raw: str) -> dict[str, Any]:
@@ -416,8 +433,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=frontend_origins,
-    allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -434,6 +451,50 @@ async def list_scenarios() -> list[dict[str, Any]]:
     except ScenarioDataError as error:
         logger.exception("Catálogo de escenarios inválido.")
         raise HTTPException(status_code=500, detail=str(error)) from error
+
+
+@app.post("/api/register-session", status_code=201)
+async def register_session(request: UserRegister) -> dict[str, str]:
+    nombre = request.nombre.strip()
+    carrera = request.carrera.strip()
+    caso_id = request.caso_id.strip()
+    if not nombre:
+        raise HTTPException(status_code=422, detail="El nombre es obligatorio.")
+    if carrera not in ALLOWED_CAREERS:
+        raise HTTPException(status_code=422, detail="La carrera seleccionada no es válida.")
+
+    try:
+        scenarios = load_scenarios()
+    except ScenarioDataError as error:
+        logger.exception("Catálogo de escenarios inválido.")
+        raise HTTPException(status_code=500, detail=str(error)) from error
+    if not any(scenario["id"] == caso_id for scenario in scenarios):
+        raise HTTPException(status_code=404, detail=f"Escenario '{caso_id}' no encontrado.")
+
+    async with USER_SESSIONS_LOCK:
+        try:
+            if USER_SESSIONS_PATH.exists():
+                sessions = json.loads(USER_SESSIONS_PATH.read_text(encoding="utf-8"))
+                if not isinstance(sessions, list):
+                    raise ValueError("El archivo de sesiones debe contener un array.")
+            else:
+                sessions = []
+            sessions.append({
+                "nombre": nombre,
+                "carrera": carrera,
+                "caso_id": caso_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            temporary_path = USER_SESSIONS_PATH.with_suffix(".json.tmp")
+            temporary_path.write_text(
+                json.dumps(sessions, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            temporary_path.replace(USER_SESSIONS_PATH)
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            logger.exception("No se pudo guardar el registro de sesión.")
+            raise HTTPException(status_code=500, detail="No se pudo guardar el registro de sesión.") from error
+    return {"status": "registered"}
 
 
 class StartSessionRequest(BaseModel):
@@ -485,12 +546,10 @@ async def evaluate(request: EvaluationRequest) -> dict[str, Any]:
 
 @app.websocket("/ws/vitals")
 async def stream_vitals(websocket: WebSocket) -> None:
-    origin = websocket.headers.get("origin")
-    if origin and origin not in frontend_origins:
+    await websocket.accept()
+    if not origin_allowed(websocket.headers.get("origin")):
         await websocket.close(code=1008, reason="Origin not allowed")
         return
-
-    await websocket.accept()
     last_key: tuple[int, int, int] | None = None
 
     try:
@@ -507,12 +566,10 @@ async def stream_vitals(websocket: WebSocket) -> None:
 
 @app.websocket("/ws/audio")
 async def audio_conversation(websocket: WebSocket) -> None:
-    origin = websocket.headers.get("origin")
-    if origin and origin not in frontend_origins:
+    await websocket.accept()
+    if not origin_allowed(websocket.headers.get("origin")):
         await websocket.close(code=1008, reason="Origin not allowed")
         return
-
-    await websocket.accept()
     await websocket.send_json({"type": "status", "message": "Canal de conversación conectado."})
     history: list[dict[str, str]] = []
 
