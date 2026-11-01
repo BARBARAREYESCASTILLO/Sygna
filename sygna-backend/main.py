@@ -66,6 +66,8 @@ DEFAULT_SCENARIO_PROMPT = "Eres un paciente de 45 años que consulta por dolor t
 SCENARIOS_PATH = Path(__file__).parent / "data" / "scenarios.json"
 USER_SESSIONS_PATH = Path(__file__).parent / "user_sessions.json"
 USER_SESSIONS_LOCK = asyncio.Lock()
+FEEDBACK_PATH = Path(__file__).parent / "quejas.txt"
+FEEDBACK_LOCK = asyncio.Lock()
 ALLOWED_CAREERS = {"Ing. Biomédica", "Medicina", "Enfermería", "Kinesiología"}
 VITAL_KEYS = ("spo2", "heart_rate", "systolic", "diastolic", "respiratory_rate")
 
@@ -338,6 +340,11 @@ class EvaluationRequest(BaseModel):
     messages: list[EvaluationMessage] = Field(min_length=1, max_length=MAX_EVALUATION_MESSAGES)
 
 
+class FeedbackRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+    user: str | None = Field(default="Anónimo", max_length=120)
+
+
 class UserRegister(BaseModel):
     nombre: str = Field(min_length=1, max_length=120)
     carrera: str = Field(min_length=1, max_length=80)
@@ -451,6 +458,23 @@ async def list_scenarios() -> list[dict[str, Any]]:
     except ScenarioDataError as error:
         logger.exception("Catálogo de escenarios inválido.")
         raise HTTPException(status_code=500, detail=str(error)) from error
+
+
+@app.post("/api/feedback")
+async def save_feedback(request: FeedbackRequest) -> dict[str, str]:
+    message = " ".join(request.message.split())
+    user = " ".join((request.user or "").split()) or "Anónimo"
+    if not message:
+        raise HTTPException(status_code=422, detail="El mensaje no puede estar vacío.")
+    line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {user}: {message}\n"
+    async with FEEDBACK_LOCK:
+        try:
+            with FEEDBACK_PATH.open("a+", encoding="utf-8") as feedback_file:
+                feedback_file.write(line)
+        except OSError as error:
+            logger.exception("No se pudo guardar el feedback.")
+            raise HTTPException(status_code=500, detail="No se pudo guardar el mensaje.") from error
+    return {"status": "ok", "message": "Feedback recibido"}
 
 
 @app.post("/api/register-session", status_code=201)
